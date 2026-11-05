@@ -1,0 +1,6 @@
+*.xcodeproj/
+Signing.xcconfig
+.DS_Store
+build/
+DerivedData/
+xcuserdata/
