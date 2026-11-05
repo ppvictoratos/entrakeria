@@ -101,9 +101,13 @@ let defaultTetrad: [[Exercise]] = [
     var day: Date
     var stopID: String
     var setCounts: [String: Int]
+    var notes: String = ""
+    var placeName: String?
+    var latitude: Double?
+    var longitude: Double?
     init(day: Date, stopID: String) { self.day = day; self.stopID = stopID; setCounts = [:] }
 
-    var isStarted: Bool { setCounts.values.contains { $0 > 0 } }
+    var isStarted: Bool { setCounts.values.contains { $0 > 0 } || !notes.isEmpty }
 }
 
 /// One Save My Back item ticked on a given day.

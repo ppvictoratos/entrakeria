@@ -21,6 +21,9 @@ targets:
       - Colors.swift
       - Models.swift
       - WeekPlan.swift
+      - StopHealth.swift
+      - StopIcon.swift
+      - HealthImporter.swift
       - TetradGeometry.swift
       - SessionManager.swift
       - EntrakeriaApp.swift
@@ -37,8 +40,13 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleDisplayName: Entrakeria
+        NSHealthShareUsageDescription: Entrakeria reads your recorded workouts so you can add their stats to your log.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+    entitlements:
+      path: Entrakeria.entitlements
+      properties:
+        com.apple.developer.healthkit: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.portokali.Entrakeria
@@ -53,6 +61,8 @@ targets:
       - Colors.swift
       - Models.swift
       - WeekPlan.swift
+      - StopHealth.swift
+      - StopIcon.swift
       - Watch
     info:
       path: Watch/Info.plist

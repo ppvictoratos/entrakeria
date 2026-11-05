@@ -14,7 +14,7 @@ struct WatchHomeView: View {
         List(WeekStop.all) { stop in
             NavigationLink(value: stop.id) {
                 HStack(spacing: 10) {
-                    Image(systemName: isDoneToday(stop) ? "checkmark" : stop.symbol)
+                    StopIcon(symbol: isDoneToday(stop) ? "checkmark" : stop.symbol, size: 16, weight: .regular)
                         .foregroundStyle(isDoneToday(stop) ? EnkrateiaPalette.gold : EnkrateiaPalette.clay)
                         .frame(width: 26)
                     Text(stop.name)

@@ -24,11 +24,22 @@ struct WeekStop: Identifiable {
     static let goal = all.filter { !$0.isBonus }.count
 
     static let swim = WeekStop(
-        id: "swim", name: "Swim", symbol: "figure.pool.swim", tagline: "Gym pool",
-        moves: [.init(name: "Lap swim", detail: "20–30 min · Continuous, moderate pace", symbol: "figure.pool.swim")])
+        id: "swim", name: "Swim", symbol: "figure.pool.swim", tagline: "50–60 min · Breaks are fine",
+        moves: [
+            .init(name: "Warm-up", detail: "10 min · Easy mix of strokes and drills", symbol: "figure.pool.swim"),
+            .init(name: "Longer sets", detail: "3 × 10 min · Steady pace, rest 1–2 min between",
+                  symbol: "figure.pool.swim", sets: 3),
+            .init(name: "Sprints", detail: "6 × 25 yd · Fast, full rest between",
+                  symbol: "bolt.fill", sets: 6),
+            .init(name: "Water weights", detail: "3 × 12 · Chest deep, slow and controlled",
+                  symbol: "dumbbell.fill", sets: 3),
+            .init(name: "Water lunges", detail: "3 × 10 per leg · Tall posture",
+                  symbol: "figure.water.fitness", sets: 3),
+            .init(name: "Cool-down", detail: "5 min · Easy laps", symbol: "figure.pool.swim")
+        ])
 
     static let machines = WeekStop(
-        id: "machines", name: "Machines", symbol: "dumbbell.fill", tagline: "Glutes first",
+        id: "machines", name: "Gym", symbol: "dumbbell.fill", tagline: "Glutes first",
         moves: [
             .init(name: "Hip abduction", detail: "3 × 12 · Push out from the glutes",
                   symbol: "figure.strengthtraining.functional", sets: 3),
@@ -48,12 +59,12 @@ struct WeekStop: Identifiable {
         ])
 
     static let kayak = WeekStop(
-        id: "kayak", name: "Kayak", symbol: "figure.water.fitness", tagline: "Out on the water",
+        id: "kayak", name: "Kayak", symbol: "entrakeria.kayak", tagline: "Out on the water",
         moves: [.init(name: "Paddle", detail: "As long as your back says yes · Sit tall, take stretch breaks",
-                      symbol: "figure.water.fitness")])
+                      symbol: "entrakeria.kayak")])
 
     static let homelift = WeekStop(
-        id: "homelift", name: "Homelift", symbol: "figure.strengthtraining.functional", tagline: "12 lb KB for safety",
+        id: "homelift", name: "Homelift", symbol: "house.fill", tagline: "12 lb KB for safety",
         moves: [
             .init(name: "Banded side walk", detail: "3 × 10 per side · Band above the knees",
                   symbol: "figure.walk", sets: 3),

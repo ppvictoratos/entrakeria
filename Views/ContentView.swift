@@ -68,6 +68,7 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
             // Solid strip so cards don't scroll under the clock.
             .safeAreaInset(edge: .top, spacing: 0) {
                 Color.clear.frame(height: 0).background(EnkrateiaPalette.bg)
@@ -202,8 +203,7 @@ private struct WeekStrip: View {
                                 .stroke(isSelected ? EnkrateiaPalette.gold : EnkrateiaPalette.line,
                                         lineWidth: isSelected ? 1.5 : 1)
                             if let first = placed.first, let stop = WeekStop.named(first.stopID) {
-                                Image(systemName: stop.symbol)
-                                    .font(.system(size: 16, weight: .light))
+                                StopIcon(symbol: stop.symbol, size: 16)
                                     .foregroundStyle(first.isStarted ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
                             }
                             if placed.count > 1 {
@@ -236,8 +236,7 @@ private struct StopChip: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: isDone ? "checkmark" : stop.symbol)
-                    .font(.system(size: 18, weight: .light))
+                StopIcon(symbol: isDone ? "checkmark" : stop.symbol, size: 18)
                     .frame(height: 22)
                 Text(stop.name.uppercased())
                     .font(.system(size: 8, weight: .semibold))
@@ -260,8 +259,12 @@ private struct StopChip: View {
 
 private struct StopSection: View {
     let stop: WeekStop
-    let log: StopLog
+    @Bindable var log: StopLog
     let onChange: () -> Void
+
+    @State private var placeDraft = ""
+    @State private var importMessage: String?
+    @State private var isImporting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -281,6 +284,87 @@ private struct StopSection: View {
                     onChange()
                 }
             }
+            if stop.id == "hike" { hikePlace }
+            statsLog
+        }
+        .onAppear { placeDraft = log.placeName ?? "" }
+        .onChange(of: log.notes) { onChange() }
+    }
+
+    private var hikePlace: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("Where did you go?", text: $placeDraft)
+                .font(.system(size: 15))
+                .foregroundStyle(EnkrateiaPalette.parchment)
+                .submitLabel(.search)
+                .padding(12)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(EnkrateiaPalette.line, lineWidth: 1))
+                .onSubmit(findPlace)
+            if let name = log.placeName, let lat = log.latitude, let lon = log.longitude {
+                TopoMapView(place: name, latitude: lat, longitude: lon)
+            }
+        }
+    }
+
+    private var statsLog: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            TextField("Log your stats", text: $log.notes, axis: .vertical)
+                .font(.system(size: 14))
+                .foregroundStyle(EnkrateiaPalette.parchment)
+                .lineLimit(2...8)
+                .padding(12)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(EnkrateiaPalette.line, lineWidth: 1))
+
+            Button(action: importFromHealth) {
+                Label(isImporting ? "CHECKING HEALTH…" : "IMPORT FROM APPLE HEALTH", systemImage: "heart")
+                    .font(.system(size: 10, weight: .medium))
+                    .kerning(1.5)
+                    .foregroundStyle(EnkrateiaPalette.bronze)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+            .disabled(isImporting)
+
+            if let importMessage {
+                Text(importMessage)
+                    .font(.system(size: 12).italic())
+                    .foregroundStyle(EnkrateiaPalette.bronze)
+            }
+        }
+    }
+
+    private func findPlace() {
+        let place = placeDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !place.isEmpty else { return }
+        log.placeName = place
+        Task {
+            if let found = try? await TopoMap.coordinate(for: place) {
+                log.latitude = found.latitude
+                log.longitude = found.longitude
+            } else {
+                log.latitude = nil
+                log.longitude = nil
+            }
+            onChange()
+        }
+    }
+
+    private func importFromHealth() {
+        isImporting = true
+        importMessage = nil
+        Task {
+            defer { isImporting = false }
+            do {
+                guard let summary = try await HealthImporter.summary(for: stop, on: log.day) else {
+                    importMessage = "No \(stop.name.lowercased()) workout in Health for this day."
+                    return
+                }
+                if !log.notes.contains(summary) {
+                    log.notes = log.notes.isEmpty ? summary : log.notes + "\n" + summary
+                }
+            } catch {
+                importMessage = "Couldn't read from Apple Health."
+            }
         }
     }
 }
@@ -294,8 +378,7 @@ private struct MoveCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: move.symbol)
-                .font(.system(size: 26, weight: .ultraLight))
+            StopIcon(symbol: move.symbol, size: 26, weight: .ultraLight)
                 .foregroundStyle(finished ? EnkrateiaPalette.gold : EnkrateiaPalette.clay)
                 .frame(width: 40)
 

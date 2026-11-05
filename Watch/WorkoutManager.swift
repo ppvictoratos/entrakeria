@@ -13,27 +13,6 @@ import Observation
     private(set) var isBusy = false
     var errorMessage: String?
 
-    static func configuration(for stop: WeekStop) -> HKWorkoutConfiguration {
-        let config = HKWorkoutConfiguration()
-        switch stop.id {
-        case "swim":
-            config.activityType = .swimming
-            config.locationType = .indoor
-            config.swimmingLocationType = .pool
-            config.lapLength = HKQuantity(unit: .yard(), doubleValue: 25)
-        case "kayak":
-            config.activityType = .paddleSports
-            config.locationType = .outdoor
-        case "hike":
-            config.activityType = .hiking
-            config.locationType = .outdoor
-        default:
-            config.activityType = .traditionalStrengthTraining
-            config.locationType = .indoor
-        }
-        return config
-    }
-
     func start(_ stop: WeekStop) async {
         guard activeStopID == nil, !isBusy else { return }
         isBusy = true
@@ -44,7 +23,7 @@ import Observation
             try await store.requestAuthorization(toShare: [HKObjectType.workoutType(), energy],
                                                  read: [energy, HKQuantityType(.heartRate)])
 
-            let config = Self.configuration(for: stop)
+            let config = stop.workoutConfiguration
             let session = try HKWorkoutSession(healthStore: store, configuration: config)
             let builder = session.associatedWorkoutBuilder()
             builder.dataSource = HKLiveWorkoutDataSource(healthStore: store, workoutConfiguration: config)
