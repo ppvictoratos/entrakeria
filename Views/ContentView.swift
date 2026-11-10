@@ -110,15 +110,10 @@ struct ContentView: View {
     }
 
     private var tally: some View {
-        HStack(spacing: 8) {
-            Text("\(goalsDone) / \(WeekStop.goal) THIS WEEK")
-                .foregroundStyle(goalsDone >= WeekStop.goal ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
-            if isDoneThisWeek(.hike) {
-                Text("· HIKED").foregroundStyle(EnkrateiaPalette.gold)
-            }
-        }
-        .font(.system(size: 11, weight: .medium))
-        .kerning(2)
+        Text("\(goalsDone) / \(WeekStop.goal) THIS WEEK")
+            .foregroundStyle(goalsDone >= WeekStop.goal ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
+            .font(.system(size: 11, weight: .medium))
+            .kerning(2)
     }
 
     @ViewBuilder private var dayContent: some View {
@@ -132,7 +127,11 @@ struct ContentView: View {
         } else {
             ForEach(today) { log in
                 if let stop = WeekStop.named(log.stopID) {
-                    StopSection(stop: stop, log: log) { try? context.save() }
+                    StopSection(
+                        stop: stop,
+                        log: log,
+                        onDelete: stop.id == "hike" ? { remove(log) } : nil
+                    ) { try? context.save() }
                 }
             }
         }
@@ -163,7 +162,11 @@ struct ContentView: View {
     }
 
     private func toggle(_ stop: WeekStop) {
-        if let placed = logs(on: selectedDay).first(where: { $0.stopID == stop.id }) {
+        if stop.id == "hike" {
+            // Hike supports multiple entries per day — always add.
+            context.insert(StopLog(day: selectedDay, stopID: stop.id))
+            try? context.save()
+        } else if let placed = logs(on: selectedDay).first(where: { $0.stopID == stop.id }) {
             if placed.isStarted { removing = placed } else { remove(placed) }
         } else {
             context.insert(StopLog(day: selectedDay, stopID: stop.id))
@@ -260,6 +263,7 @@ private struct StopChip: View {
 private struct StopSection: View {
     let stop: WeekStop
     @Bindable var log: StopLog
+    var onDelete: (() -> Void)? = nil
     let onChange: () -> Void
 
     @State private var placeDraft = ""
@@ -277,6 +281,15 @@ private struct StopSection: View {
                 Text(stop.tagline)
                     .font(.system(size: 11).italic())
                     .foregroundStyle(EnkrateiaPalette.bronze)
+                if let onDelete {
+                    Button(action: onDelete) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(EnkrateiaPalette.bronze)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.leading, 8)
+                }
             }
             ForEach(stop.moves) { move in
                 MoveCard(move: move, done: log.setCounts[move.name] ?? 0) { count in
@@ -300,6 +313,38 @@ private struct StopSection: View {
                 .padding(12)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(EnkrateiaPalette.line, lineWidth: 1))
                 .onSubmit(findPlace)
+
+            // Rating
+            HStack {
+                Text("RATING")
+                    .font(.system(size: 10, weight: .medium))
+                    .kerning(2)
+                    .foregroundStyle(EnkrateiaPalette.bronze)
+                Spacer()
+                Text(log.rating == 0 ? "—" : "\(log.rating) / 10")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(log.rating > 0 ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
+                Stepper("", value: $log.rating, in: 0...10)
+                    .labelsHidden()
+                    .onChange(of: log.rating) { onChange() }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(EnkrateiaPalette.line, lineWidth: 1))
+
+            // Dog
+            Toggle(isOn: $log.dogCame) {
+                Label("DOG CAME", systemImage: "dog.fill")
+                    .font(.system(size: 10, weight: .medium))
+                    .kerning(2)
+                    .foregroundStyle(EnkrateiaPalette.bronze)
+            }
+            .tint(EnkrateiaPalette.gold)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(EnkrateiaPalette.line, lineWidth: 1))
+            .onChange(of: log.dogCame) { onChange() }
+
             if let name = log.placeName, let lat = log.latitude, let lon = log.longitude {
                 TopoMapView(place: name, latitude: lat, longitude: lon)
             }

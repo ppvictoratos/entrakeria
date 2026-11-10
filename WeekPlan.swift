@@ -20,7 +20,7 @@ struct WeekStop: Identifiable {
 
     static func named(_ id: String) -> WeekStop? { all.first { $0.id == id } }
 
-    static let all: [WeekStop] = [swim, machines, kayak, homelift, hike]
+    static let all: [WeekStop] = [swim, machines, kayak, homelift, hike, morningStretch]
     static let goal = all.filter { !$0.isBonus }.count
 
     static let swim = WeekStop(
@@ -86,8 +86,20 @@ struct WeekStop: Identifiable {
         ])
 
     static let hike = WeekStop(
-        id: "hike", name: "Hike", symbol: "figure.hiking", tagline: "Good for the mind", isBonus: true,
+        id: "hike", name: "Hike", symbol: "figure.hiking", tagline: "Good for the mind",
         moves: [.init(name: "Hike", detail: "No pace to hit. Just go.", symbol: "figure.hiking")])
+
+    static let morningStretch = WeekStop(
+        id: "morning", name: "Morning", symbol: "sunrise.fill", tagline: "Floor reset · Every day",
+        isBonus: true,
+        moves: [
+            .init(name: "Pelvic tilts",   detail: "29 slow reps · Flat back",         symbol: "figure.flexibility"),
+            .init(name: "Glute bridges",  detail: "2 × 12 · 2 sec squeeze",           symbol: "figure.core.training", sets: 2),
+            .init(name: "Ham bridges",    detail: "2 × 12 · 2 sec squeeze",           symbol: "figure.core.training", sets: 2),
+            .init(name: "Clamshells",     detail: "2 × 20 each side",                 symbol: "figure.strengthtraining.functional", sets: 2),
+            .init(name: "Leg lifts",      detail: "2 × 10 each side · Lateral",       symbol: "figure.strengthtraining.functional", sets: 2),
+            .init(name: "Child's pose",   detail: "60 sec",                           symbol: "figure.yoga"),
+        ])
 }
 
 /// Weeks run Monday to Sunday and start out blank.

@@ -105,6 +105,8 @@ let defaultTetrad: [[Exercise]] = [
     var placeName: String?
     var latitude: Double?
     var longitude: Double?
+    var rating: Int = 0
+    var dogCame: Bool = false
     init(day: Date, stopID: String) { self.day = day; self.stopID = stopID; setCounts = [:] }
 
     var isStarted: Bool { setCounts.values.contains { $0 > 0 } || !notes.isEmpty }
