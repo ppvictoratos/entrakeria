@@ -9,6 +9,6 @@ struct EntrakeriaApp: App {
                 .preferredColorScheme(.dark)
         }
         .modelContainer(for: [TetradCycle.self, WorkoutSession.self, ExerciseLog.self,
-                         StopLog.self, BackCheck.self])
+                         StopLog.self, BackCheck.self, MoveConfig.self])
     }
 }

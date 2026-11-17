@@ -266,9 +266,22 @@ private struct StopSection: View {
     var onDelete: (() -> Void)? = nil
     let onChange: () -> Void
 
+    @Environment(\.modelContext) private var context
+    @Query private var configs: [MoveConfig]
     @State private var placeDraft = ""
     @State private var importMessage: String?
     @State private var isImporting = false
+    @State private var configuring = false
+
+    private func config(for move: Move) -> MoveConfig? { MoveConfig.find(stop.id, move.name, in: configs) }
+
+    /// Makes the override row on first touch, so untouched moves stay on their defaults.
+    private func editableConfig(for move: Move) -> MoveConfig {
+        if let existing = config(for: move) { return existing }
+        let fresh = MoveConfig(stopID: stop.id, moveName: move.name)
+        context.insert(fresh)
+        return fresh
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -281,6 +294,18 @@ private struct StopSection: View {
                 Text(stop.tagline)
                     .font(.system(size: 11).italic())
                     .foregroundStyle(EnkrateiaPalette.bronze)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Button { withAnimation(.easeInOut(duration: 0.15)) { configuring.toggle() } } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(configuring ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
+                        .frame(width: 36, height: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, -8)
+                .accessibilityLabel(configuring ? "Done editing sets" : "Edit sets")
                 if let onDelete {
                     Button(action: onDelete) {
                         Image(systemName: "xmark")
@@ -292,10 +317,27 @@ private struct StopSection: View {
                 }
             }
             ForEach(stop.moves) { move in
-                MoveCard(move: move, done: log.setCounts[move.name] ?? 0) { count in
-                    log.setCounts[move.name] = count
-                    onChange()
-                }
+                let cfg = config(for: move)
+                MoveCard(move: move,
+                         sets: cfg?.sets ?? move.sets,
+                         done: log.setCounts[move.name] ?? 0,
+                         weight: log.weights[move.name] ?? cfg?.weight,
+                         configuring: configuring,
+                         setDone: { count in
+                             log.setCounts[move.name] = count
+                             onChange()
+                         },
+                         setWeight: { weight in
+                             // Today's number, and the default for next time.
+                             log.weights[move.name] = weight
+                             editableConfig(for: move).weight = weight
+                             onChange()
+                         },
+                         setSets: { sets in
+                             editableConfig(for: move).sets = sets
+                             if (log.setCounts[move.name] ?? 0) > sets { log.setCounts[move.name] = sets }
+                             onChange()
+                         })
             }
             if stop.id == "hike" { hikePlace }
             statsLog
@@ -416,57 +458,153 @@ private struct StopSection: View {
 
 private struct MoveCard: View {
     let move: Move
+    let sets: Int
     let done: Int
+    let weight: Double?
+    let configuring: Bool
     let setDone: (Int) -> Void
+    let setWeight: (Double?) -> Void
+    let setSets: (Int) -> Void
 
-    private var finished: Bool { done >= move.sets }
+    private var finished: Bool { done >= sets }
 
     var body: some View {
-        HStack(spacing: 12) {
-            StopIcon(symbol: move.symbol, size: 26, weight: .ultraLight)
-                .foregroundStyle(finished ? EnkrateiaPalette.gold : EnkrateiaPalette.clay)
-                .frame(width: 40)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                StopIcon(symbol: move.symbol, size: 26, weight: .ultraLight)
+                    .foregroundStyle(finished ? EnkrateiaPalette.gold : EnkrateiaPalette.clay)
+                    .frame(width: 40)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(move.name)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(EnkrateiaPalette.parchment)
-                Text(move.detail)
-                    .font(.system(size: 12))
-                    .foregroundStyle(EnkrateiaPalette.bronze)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 0) {
-                    ForEach(0..<move.sets, id: \.self) { i in
-                        Button {
-                            // Tapping the last filled dot steps back, so a mistap is one tap to undo.
-                            setDone(done == i + 1 ? i : i + 1)
-                        } label: {
-                            Circle()
-                                .fill(i < done ? EnkrateiaPalette.gold : .clear)
-                                .overlay(Circle().stroke(i < done ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze, lineWidth: 1))
-                                .frame(width: 22, height: 22)
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("\(move.name), set \(i + 1) of \(move.sets)")
-                        .accessibilityValue(i < done ? "Done" : "Not done")
-                    }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(move.name)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(EnkrateiaPalette.parchment)
+                    Text(move.detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(EnkrateiaPalette.bronze)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.leading, -11)
+                Spacer(minLength: 0)
+                if configuring {
+                    Stepper("\(sets)", value: Binding(get: { sets }, set: setSets), in: 1...12)
+                        .font(.system(size: 14, weight: .medium).monospacedDigit())
+                        .foregroundStyle(EnkrateiaPalette.gold)
+                        .fixedSize()
+                        .accessibilityLabel("\(move.name) sets")
+                }
             }
-            Spacer(minLength: 0)
+
+            SetPills(name: move.name, sets: sets, done: done, setDone: setDone)
+
+            if move.weighted {
+                WeightField(weight: weight, setWeight: setWeight)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 12)
-        .padding(.bottom, 2)
+        .padding(12)
         .overlay(RoundedRectangle(cornerRadius: 8)
             .stroke(finished ? EnkrateiaPalette.bronze : EnkrateiaPalette.line, lineWidth: 1))
     }
 }
 
+/// One pill per set, sharing the card's width equally.
+private struct SetPills: View {
+    let name: String
+    let sets: Int
+    let done: Int
+    let setDone: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<sets, id: \.self) { i in
+                Button {
+                    // Tapping the last filled pill steps back, so a mistap is one tap to undo.
+                    setDone(done == i + 1 ? i : i + 1)
+                } label: {
+                    Capsule()
+                        .fill(i < done ? EnkrateiaPalette.gold : .clear)
+                        .overlay(Capsule().stroke(i < done ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze, lineWidth: 1))
+                        .frame(height: 22)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(name), set \(i + 1) of \(sets)")
+                .accessibilityValue(i < done ? "Done" : "Not done")
+            }
+        }
+        .padding(.vertical, -11)
+    }
+}
+
+/// The load you're on, in pounds. Blank means you haven't picked one yet.
+private struct WeightField: View {
+    let weight: Double?
+    let setWeight: (Double?) -> Void
+
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    private static func format(_ w: Double?) -> String {
+        guard let w else { return "" }
+        return w == w.rounded() ? String(Int(w)) : String(w)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("WEIGHT")
+                .font(.system(size: 10, weight: .medium))
+                .kerning(2)
+                .foregroundStyle(EnkrateiaPalette.bronze)
+            Spacer()
+            Button { bump(-5) } label: { adjuster("minus") }
+                .accessibilityLabel("Less weight")
+            TextField("—", text: $text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.center)
+                .font(.system(size: 15, weight: .medium).monospacedDigit())
+                .foregroundStyle(weight == nil ? EnkrateiaPalette.bronze : EnkrateiaPalette.gold)
+                .frame(width: 56)
+                .focused($focused)
+                .onChange(of: focused) { _, isFocused in if !isFocused { commit() } }
+                .onSubmit(commit)
+            Text("lb")
+                .font(.system(size: 11))
+                .foregroundStyle(EnkrateiaPalette.bronze)
+            Button { bump(5) } label: { adjuster("plus") }
+                .accessibilityLabel("More weight")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(EnkrateiaPalette.line, lineWidth: 1))
+        .onAppear { text = Self.format(weight) }
+        .onChange(of: weight) { _, w in if !focused { text = Self.format(w) } }
+    }
+
+    private func adjuster(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(EnkrateiaPalette.gold)
+            .frame(width: 32, height: 32)
+            .contentShape(Rectangle())
+    }
+
+    private func bump(_ delta: Double) {
+        let next = max(0, (weight ?? 0) + delta)
+        text = Self.format(next)
+        setWeight(next)
+    }
+
+    private func commit() {
+        let trimmed = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        let parsed = Double(trimmed)
+        if trimmed.isEmpty { setWeight(nil) }
+        else if let parsed { setWeight(parsed) }
+        else { text = Self.format(weight) }
+    }
+}
+
 #Preview {
     ContentView()
-        .modelContainer(for: [StopLog.self, BackCheck.self], inMemory: true)
+        .modelContainer(for: [StopLog.self, BackCheck.self, MoveConfig.self], inMemory: true)
 }

@@ -41,9 +41,14 @@ struct WatchStopView: View {
     @Environment(\.modelContext) private var context
     @Environment(WorkoutManager.self) private var workout
     @Query private var logs: [StopLog]
+    @Query private var configs: [MoveConfig]
 
     private var log: StopLog? {
         logs.first { $0.stopID == stop.id && Week.calendar.isDateInToday($0.day) }
+    }
+
+    private func sets(for move: Move) -> Int {
+        MoveConfig.find(stop.id, move.name, in: configs)?.sets ?? move.sets
     }
 
     var body: some View {
@@ -51,7 +56,11 @@ struct WatchStopView: View {
             Section { workoutRow }
             ForEach(stop.moves) { move in
                 Button { advance(move) } label: {
-                    WatchMoveRow(move: move, done: log?.setCounts[move.name] ?? 0)
+                    WatchMoveRow(move: move,
+                                 sets: sets(for: move),
+                                 done: log?.setCounts[move.name] ?? 0,
+                                 weight: log?.weights[move.name]
+                                    ?? MoveConfig.find(stop.id, move.name, in: configs)?.weight)
                 }
             }
         }
@@ -97,7 +106,7 @@ struct WatchStopView: View {
             context.insert(current)
         }
         let done = current.setCounts[move.name] ?? 0
-        current.setCounts[move.name] = done >= move.sets ? 0 : done + 1
+        current.setCounts[move.name] = done >= sets(for: move) ? 0 : done + 1
         try? context.save()
         WKInterfaceDevice.current().play(.click)
     }
@@ -105,28 +114,39 @@ struct WatchStopView: View {
 
 private struct WatchMoveRow: View {
     let move: Move
+    let sets: Int
     let done: Int
+    let weight: Double?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(move.name)
-                .font(.headline)
-                .foregroundStyle(EnkrateiaPalette.parchment)
+            HStack(alignment: .firstTextBaseline) {
+                Text(move.name)
+                    .font(.headline)
+                    .foregroundStyle(EnkrateiaPalette.parchment)
+                Spacer(minLength: 4)
+                if let weight {
+                    Text(weight == weight.rounded() ? "\(Int(weight)) lb" : "\(weight) lb")
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(EnkrateiaPalette.gold)
+                }
+            }
             Text(move.detail)
                 .font(.footnote)
                 .foregroundStyle(EnkrateiaPalette.bronze)
-            HStack(spacing: 5) {
-                ForEach(0..<move.sets, id: \.self) { i in
-                    Circle()
+            HStack(spacing: 4) {
+                ForEach(0..<sets, id: \.self) { i in
+                    Capsule()
                         .fill(i < done ? EnkrateiaPalette.gold : .clear)
-                        .overlay(Circle().stroke(i < done ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze, lineWidth: 1))
-                        .frame(width: 11, height: 11)
+                        .overlay(Capsule().stroke(i < done ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze, lineWidth: 1))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 10)
                 }
             }
             .padding(.top, 2)
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityValue("\(done) of \(move.sets) sets done")
+        .accessibilityValue("\(done) of \(sets) sets done")
     }
 }

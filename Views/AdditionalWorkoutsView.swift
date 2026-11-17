@@ -121,13 +121,6 @@ let rehabSections: [RehabSection] = [
         "15 min reset — shake, cat-cow, down dog, lunges, shoulder rolls, twist",
         "7 min breath work — 4 in, 6 out"
     ]),
-    .init("Pre-workout warm-up · 5 min", [
-        "Cat-cow — 10 reps",
-        "Hip flexor stretch — 30 sec/side",
-        "Glute bridge — 15 reps",
-        "Bird-dog — 5/side",
-        "Bodyweight squat to depth — 10 reps"
-    ]),
     .init("Home lower (hinge)", [
         "Goblet squat, 12 lb KB — 4×8, slow tempo",
         "KB RDL, 12 lb — 4×8, deliberate hinge, neutral spine",

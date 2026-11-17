@@ -9,6 +9,7 @@ extension WeekStop {
         case "kayak": return .paddleSports
         case "hike": return .hiking
         case "homelift": return .functionalStrengthTraining
+        case "core", "morning": return .coreTraining
         default: return .traditionalStrengthTraining
         }
     }

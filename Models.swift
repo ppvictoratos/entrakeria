@@ -107,6 +107,8 @@ let defaultTetrad: [[Exercise]] = [
     var longitude: Double?
     var rating: Int = 0
     var dogCame: Bool = false
+    /// Weight used that day, per move name. Empty means "whatever the move's config says".
+    var weights: [String: Double] = [:]
     init(day: Date, stopID: String) { self.day = day; self.stopID = stopID; setCounts = [:] }
 
     var isStarted: Bool { setCounts.values.contains { $0 > 0 } || !notes.isEmpty }
@@ -117,4 +119,18 @@ let defaultTetrad: [[Exercise]] = [
     var day: Date
     var itemID: String
     init(day: Date, itemID: String) { self.day = day; self.itemID = itemID }
+}
+
+/// Your own tweaks to a move: how many sets you actually do, and the weight you're on.
+/// One per (stop, move); absent means the defaults in WeekPlan.
+@Model final class MoveConfig {
+    var stopID: String
+    var moveName: String
+    var sets: Int?
+    var weight: Double?
+    init(stopID: String, moveName: String) { self.stopID = stopID; self.moveName = moveName }
+
+    static func find(_ stopID: String, _ moveName: String, in configs: [MoveConfig]) -> MoveConfig? {
+        configs.first { $0.stopID == stopID && $0.moveName == moveName }
+    }
 }

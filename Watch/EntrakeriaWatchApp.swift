@@ -12,6 +12,6 @@ struct EntrakeriaWatchApp: App {
             }
             .environment(workout)
         }
-        .modelContainer(for: [StopLog.self])
+        .modelContainer(for: [StopLog.self, MoveConfig.self])
     }
 }
