@@ -1,6 +1,7 @@
 import SwiftData
 import SwiftUI
 import UIKit
+import WidgetKit
 
 /// Home: a blank week. Place stops on whatever day life allows, then check off sets.
 struct ContentView: View {
@@ -134,7 +135,7 @@ struct ContentView: View {
                         stop: stop,
                         log: log,
                         onDelete: stop.allowsRepeats ? { remove(log) } : nil
-                    ) { try? context.save() }
+                    ) { save() }
                 }
             }
         }
@@ -168,18 +169,24 @@ struct ContentView: View {
         if stop.allowsRepeats {
             // Nature supports multiple entries per day — always add.
             context.insert(StopLog(day: selectedDay, stopID: stop.id))
-            try? context.save()
+            save()
         } else if let placed = logs(on: selectedDay).first(where: { $0.stopID == stop.id }) {
             if placed.isStarted { removing = placed } else { remove(placed) }
         } else {
             context.insert(StopLog(day: selectedDay, stopID: stop.id))
-            try? context.save()
+            save()
         }
     }
 
     private func remove(_ log: StopLog) {
         context.delete(log)
+        save()
+    }
+
+    /// Every change flushes to disk and tells the widget, which reads the same store.
+    private func save() {
         try? context.save()
+        WidgetCenter.shared.reloadTimelines(ofKind: SharedStore.widgetKind)
     }
 
     /// Logs placed under a stop that no longer exists move to the stop that absorbed it.

@@ -63,7 +63,6 @@ struct WeekStop: Identifiable {
 
     static let morningStretch = WeekStop(
         id: "morning", name: "Morning", symbol: "sunrise.fill", tagline: "Floor reset · Every day",
-        isBonus: true,
         moves: [
             .init(name: "Pelvic tilts",   detail: "29 slow reps · Flat back",         symbol: "figure.flexibility"),
             .init(name: "Glute bridges",  detail: "2 × 12 · 2 sec squeeze",           symbol: "figure.core.training", sets: 2),
