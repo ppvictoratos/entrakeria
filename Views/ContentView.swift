@@ -187,6 +187,7 @@ struct ContentView: View {
     private func save() {
         try? context.save()
         WidgetCenter.shared.reloadTimelines(ofKind: SharedStore.widgetKind)
+        WatchSync.shared.push()
     }
 
     /// Logs placed under a stop that no longer exists move to the stop that absorbed it.

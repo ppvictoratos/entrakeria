@@ -1,14 +1,11 @@
-import SwiftData
 import SwiftUI
 import WatchKit
 
 struct WatchHomeView: View {
     @Environment(WorkoutManager.self) private var workout
-    @Query private var logs: [StopLog]
+    @Environment(PhoneMirror.self) private var phone
 
-    private func isDoneToday(_ stop: WeekStop) -> Bool {
-        logs.contains { $0.stopID == stop.id && $0.isStarted && Week.calendar.isDateInToday($0.day) }
-    }
+    private func isDoneToday(_ stop: WeekStop) -> Bool { phone.stop(stop.id)?.isStarted ?? false }
 
     var body: some View {
         List(WeekStop.all) { stop in
@@ -38,18 +35,11 @@ struct WatchHomeView: View {
 struct WatchStopView: View {
     let stop: WeekStop
 
-    @Environment(\.modelContext) private var context
     @Environment(WorkoutManager.self) private var workout
-    @Query private var logs: [StopLog]
-    @Query private var configs: [MoveConfig]
+    @Environment(PhoneMirror.self) private var phone
 
-    private var log: StopLog? {
-        logs.first { $0.stopID == stop.id && Week.calendar.isDateInToday($0.day) }
-    }
-
-    private func sets(for move: Move) -> Int {
-        MoveConfig.find(stop.id, move.name, in: configs)?.sets ?? move.sets
-    }
+    private var log: WatchSnapshot.Stop? { phone.stop(stop.id) }
+    private func sets(for move: Move) -> Int { phone.today?.sets(for: move, in: stop.id) ?? move.sets }
 
     var body: some View {
         List {
@@ -61,8 +51,7 @@ struct WatchStopView: View {
                             WatchMoveRow(move: move,
                                          sets: sets(for: move),
                                          done: log?.setCounts[move.name] ?? 0,
-                                         weight: log?.weights[move.name]
-                                            ?? MoveConfig.find(stop.id, move.name, in: configs)?.weight)
+                                         weight: phone.today?.weight(for: move, in: stop.id))
                         }
                     }
                 } header: {
@@ -106,16 +95,8 @@ struct WatchStopView: View {
 
     /// Each tap checks one more set; tapping a finished move clears it, so a mistap is recoverable.
     private func advance(_ move: Move) {
-        let current: StopLog
-        if let log {
-            current = log
-        } else {
-            current = StopLog(day: Week.calendar.startOfDay(for: .now), stopID: stop.id)
-            context.insert(current)
-        }
-        let done = current.setCounts[move.name] ?? 0
-        current.setCounts[move.name] = done >= sets(for: move) ? 0 : done + 1
-        try? context.save()
+        let done = log?.setCounts[move.name] ?? 0
+        phone.tick(stopID: stop.id, move: move.name, count: done >= sets(for: move) ? 0 : done + 1)
         WKInterfaceDevice.current().play(.click)
     }
 }

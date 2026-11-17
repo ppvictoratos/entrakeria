@@ -27,6 +27,8 @@ targets:
       - TetradGeometry.swift
       - SessionManager.swift
       - SharedStore.swift
+      - WatchSnapshot.swift
+      - WatchSync.swift
       - EntrakeriaApp.swift
       - Views
       - Assets.xcassets
@@ -63,10 +65,10 @@ targets:
     deploymentTarget: "10.0"
     sources:
       - Colors.swift
-      - Models.swift
       - WeekPlan.swift
       - StopHealth.swift
       - StopIcon.swift
+      - WatchSnapshot.swift
       - Watch
     info:
       path: Watch/Info.plist

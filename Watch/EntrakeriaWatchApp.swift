@@ -1,9 +1,9 @@
-import SwiftData
 import SwiftUI
 
 @main
 struct EntrakeriaWatchApp: App {
     @State private var workout = WorkoutManager()
+    @State private var phone = PhoneMirror()
 
     var body: some Scene {
         WindowGroup {
@@ -11,7 +11,8 @@ struct EntrakeriaWatchApp: App {
                 WatchHomeView()
             }
             .environment(workout)
+            .environment(phone)
+            .onAppear { phone.activate() }
         }
-        .modelContainer(for: [StopLog.self, MoveConfig.self])
     }
 }

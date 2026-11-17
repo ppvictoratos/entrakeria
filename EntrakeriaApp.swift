@@ -15,7 +15,14 @@ struct EntrakeriaApp: App {
         // The widget writes to the same store from its own process. A fresh container on
         // return to the foreground is the simplest way to pick those sets up.
         .onChange(of: scenePhase) { old, phase in
-            if phase == .active && old == .background { container = SharedStore.container() }
+            guard phase == .active else { return }
+            if old == .background { container = SharedStore.container() }
+            WatchSync.shared.container = container
+            WatchSync.shared.push()
+        }
+        .onChange(of: container, initial: true) { _, fresh in
+            WatchSync.shared.container = fresh
+            WatchSync.shared.activate()
         }
     }
 }
