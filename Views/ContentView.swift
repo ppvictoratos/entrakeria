@@ -81,7 +81,10 @@ struct ContentView: View {
                     .background(EnkrateiaPalette.bg)
             }
         }
-        .onAppear(perform: updateScreenAwake)
+        .onAppear {
+            migrateLegacyStops()
+            updateScreenAwake()
+        }
         .onChange(of: selectedDay) { updateScreenAwake() }
         .onChange(of: logs.count) { updateScreenAwake() }
         .onChange(of: scenePhase) { _, phase in
@@ -130,7 +133,7 @@ struct ContentView: View {
                     StopSection(
                         stop: stop,
                         log: log,
-                        onDelete: stop.id == "hike" ? { remove(log) } : nil
+                        onDelete: stop.allowsRepeats ? { remove(log) } : nil
                     ) { try? context.save() }
                 }
             }
@@ -162,8 +165,8 @@ struct ContentView: View {
     }
 
     private func toggle(_ stop: WeekStop) {
-        if stop.id == "hike" {
-            // Hike supports multiple entries per day — always add.
+        if stop.allowsRepeats {
+            // Nature supports multiple entries per day — always add.
             context.insert(StopLog(day: selectedDay, stopID: stop.id))
             try? context.save()
         } else if let placed = logs(on: selectedDay).first(where: { $0.stopID == stop.id }) {
@@ -177,6 +180,26 @@ struct ContentView: View {
     private func remove(_ log: StopLog) {
         context.delete(log)
         try? context.save()
+    }
+
+    /// Logs placed under a stop that no longer exists move to the stop that absorbed it.
+    private func migrateLegacyStops() {
+        var changed = false
+        for log in logs {
+            guard let target = WeekStop.legacyIDs[log.stopID] else { continue }
+            // Two old stops on the same day (Hike + Kayak) stay as two entries; Gym merges.
+            if let existing = logs.first(where: { $0.stopID == target && Week.calendar.isDate($0.day, inSameDayAs: log.day) }),
+               !(WeekStop.named(target)?.allowsRepeats ?? false) {
+                existing.setCounts.merge(log.setCounts) { max($0, $1) }
+                existing.weights.merge(log.weights) { _, new in new }
+                if !log.notes.isEmpty { existing.notes += (existing.notes.isEmpty ? "" : "\n") + log.notes }
+                context.delete(log)
+            } else {
+                log.stopID = target
+            }
+            changed = true
+        }
+        if changed { try? context.save() }
     }
 
     /// The phone stays awake while today has a workout on screen.
@@ -316,7 +339,15 @@ private struct StopSection: View {
                     .padding(.leading, 8)
                 }
             }
-            ForEach(stop.moves) { move in
+            ForEach(stop.sections, id: \.title) { section in
+                if !section.title.isEmpty {
+                    Text(section.title.uppercased())
+                        .font(.system(size: 10, weight: .semibold))
+                        .kerning(2)
+                        .foregroundStyle(EnkrateiaPalette.bronze)
+                        .padding(.top, 8)
+                }
+                ForEach(section.moves) { move in
                 let cfg = config(for: move)
                 MoveCard(move: move,
                          sets: cfg?.sets ?? move.sets,
@@ -338,8 +369,9 @@ private struct StopSection: View {
                              if (log.setCounts[move.name] ?? 0) > sets { log.setCounts[move.name] = sets }
                              onChange()
                          })
+                }
             }
-            if stop.id == "hike" { hikePlace }
+            if stop.isOutdoors { hikePlace }
             statsLog
         }
         .onAppear { placeDraft = log.placeName ?? "" }

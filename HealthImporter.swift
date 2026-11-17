@@ -19,7 +19,8 @@ enum HealthImporter {
         guard let end = Week.calendar.date(byAdding: .day, value: 1, to: start) else { return nil }
         let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
             HKQuery.predicateForSamples(withStart: start, end: end),
-            HKQuery.predicateForWorkouts(with: stop.healthActivity)
+            NSCompoundPredicate(orPredicateWithSubpredicates:
+                stop.healthActivities.map { HKQuery.predicateForWorkouts(with: $0) })
         ])
         let query = HKSampleQueryDescriptor(predicates: [.workout(predicate)],
                                             sortDescriptors: [SortDescriptor(\.startDate)])

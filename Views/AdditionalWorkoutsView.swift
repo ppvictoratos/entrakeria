@@ -121,23 +121,6 @@ let rehabSections: [RehabSection] = [
         "15 min reset — shake, cat-cow, down dog, lunges, shoulder rolls, twist",
         "7 min breath work — 4 in, 6 out"
     ]),
-    .init("Home lower (hinge)", [
-        "Goblet squat, 12 lb KB — 4×8, slow tempo",
-        "KB RDL, 12 lb — 4×8, deliberate hinge, neutral spine",
-        "Reverse lunges down hallway, 15 lb DBs — 3×10/leg",
-        "Single-leg RDL, 15 lb DB — 3×8/leg",
-        "Suitcase farmer carry, 12 lb KB — 4 rounds hallway down-and-back, switch hands",
-        "Single-leg glute bridge — 3×12/leg",
-        "Side plank — 3×30 sec/side"
-    ]),
-    .init("Home upper", [
-        "Pull-ups — 4 × AMRAP (stop 1–2 short of failure)",
-        "Push-ups — 4 × AMRAP",
-        "KB single-arm row, 12 lb — 4×10/arm",
-        "KB overhead press, 12 lb — 3×8/arm",
-        "Half-kneeling Pallof press, 12 lb KB at chest — 3×10/side, resist rotation",
-        "Dead hang — 3×30 sec"
-    ]),
     .init("Hard rules", [
         "Neutral spine under load. Always.",
         "Hinge from the hips, not the low back.",

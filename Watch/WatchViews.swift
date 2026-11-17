@@ -54,13 +54,21 @@ struct WatchStopView: View {
     var body: some View {
         List {
             Section { workoutRow }
-            ForEach(stop.moves) { move in
-                Button { advance(move) } label: {
-                    WatchMoveRow(move: move,
-                                 sets: sets(for: move),
-                                 done: log?.setCounts[move.name] ?? 0,
-                                 weight: log?.weights[move.name]
-                                    ?? MoveConfig.find(stop.id, move.name, in: configs)?.weight)
+            ForEach(stop.sections, id: \.title) { section in
+                Section {
+                    ForEach(section.moves) { move in
+                        Button { advance(move) } label: {
+                            WatchMoveRow(move: move,
+                                         sets: sets(for: move),
+                                         done: log?.setCounts[move.name] ?? 0,
+                                         weight: log?.weights[move.name]
+                                            ?? MoveConfig.find(stop.id, move.name, in: configs)?.weight)
+                        }
+                    }
+                } header: {
+                    if !section.title.isEmpty {
+                        Text(section.title.uppercased()).foregroundStyle(EnkrateiaPalette.bronze)
+                    }
                 }
             }
         }

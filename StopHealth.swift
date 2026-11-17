@@ -6,18 +6,25 @@ extension WeekStop {
     var healthActivity: HKWorkoutActivityType {
         switch id {
         case "swim": return .swimming
-        case "kayak": return .paddleSports
-        case "hike": return .hiking
-        case "homelift": return .functionalStrengthTraining
-        case "core", "morning": return .coreTraining
+        case "nature": return .hiking
+        case "morning": return .coreTraining
         default: return .traditionalStrengthTraining
+        }
+    }
+
+    /// Everything that counts as this stop when reading Health back on the phone.
+    var healthActivities: [HKWorkoutActivityType] {
+        switch id {
+        case "nature": return [.hiking, .paddleSports, .walking]
+        case "machines": return [.traditionalStrengthTraining, .functionalStrengthTraining, .coreTraining]
+        default: return [healthActivity]
         }
     }
 
     var workoutConfiguration: HKWorkoutConfiguration {
         let config = HKWorkoutConfiguration()
         config.activityType = healthActivity
-        config.locationType = (id == "kayak" || id == "hike") ? .outdoor : .indoor
+        config.locationType = isOutdoors ? .outdoor : .indoor
         if id == "swim" {
             config.swimmingLocationType = .pool
             config.lapLength = HKQuantity(unit: .yard(), doubleValue: 25)
