@@ -24,6 +24,8 @@
 	<false/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Entrakeria reads your recorded workouts so you can add their stats to your log.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Entrakeria saves your workouts to Apple Health so they count toward your rings.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
