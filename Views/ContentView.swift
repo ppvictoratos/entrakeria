@@ -499,19 +499,6 @@ private struct StopSection: View {
             .padding(.vertical, 10)
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(EnkrateiaPalette.line, lineWidth: 1))
 
-            // Dog
-            Toggle(isOn: $log.dogCame) {
-                Label("DOG CAME", systemImage: "dog.fill")
-                    .font(.system(size: 10, weight: .medium))
-                    .kerning(2)
-                    .foregroundStyle(EnkrateiaPalette.bronze)
-            }
-            .tint(EnkrateiaPalette.gold)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(EnkrateiaPalette.line, lineWidth: 1))
-            .onChange(of: log.dogCame) { onChange() }
-
             if let name = log.placeName, let lat = log.latitude, let lon = log.longitude {
                 TopoMapView(place: name, latitude: lat, longitude: lon)
             }
