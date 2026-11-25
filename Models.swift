@@ -54,43 +54,43 @@ struct Exercise: Identifiable {
 let defaultTetrad: [[Exercise]] = [
     // Day 1 — Preparation & CNS Priming
     [
-        .init("Kettlebell Swings", label: "KB Swings", sets: 3, "3 × 10 · Explosive hip drive",
-              symbol: "figure.strengthtraining.functional"),
-        .init("Medicine Ball Rotational Throws", label: "Med Ball Throws", sets: 3,
-              "3 × 8 per side · Golf power translation", symbol: "figure.golf"),
-        .init("Bodyweight Pull-Ups (Speed)", label: "Speed Pull-Ups", sets: 4,
-              "4 × 5 · Explosive up, 2-sec lower", symbol: "figure.climbing"),
-        .init("Kettlebell Goblet Squats", label: "Goblet Squats", sets: 3, "3 × 12",
-              symbol: "figure.strengthtraining.functional")
+        .init("Kettlebell Thrusters", label: "KB Thrusters", sets: 3,
+              "3 × 8 · 12 lb · Squat, then press in one motion", symbol: "figure.strengthtraining.functional"),
+        .init("Kettlebell Halo", label: "KB Halo", sets: 3,
+              "3 × 5 each way · 12 lb · Standing, ribs down", symbol: "figure.strengthtraining.functional"),
+        .init("Kettlebell Farmer Carry", label: "Farmer Carry", sets: 4,
+              "4 × 40 yd · 12 lb each hand · Grip, tall posture", symbol: "figure.walk"),
+        .init("Kettlebell Goblet Squats", label: "Goblet Squats", sets: 3,
+              "3 × 10 · Hold 3 sec at the bottom", symbol: "figure.strengthtraining.functional")
     ],
     // Day 2 — High Intensity & Heavy Load
     [
-        .init("Weighted Pull-Ups", sets: 4, "4 × 4–6 · Dipping belt, heavy, 3-min rest",
+        .init("Weighted Pull-Ups", sets: 4, "4 × 5 · Dipping belt, heavy, 3-min rest",
               symbol: "figure.climbing"),
-        .init("Conventional Barbell Deadlift", label: "Deadlift", sets: 3,
-              "3 × 5 · Posterior chain foundation", symbol: "figure.strengthtraining.traditional"),
-        .init("Overhead Barbell Press", label: "Overhead Press", sets: 3, "3 × 6",
-              symbol: "figure.strengthtraining.traditional"),
-        .init("Hanging Leg Raises", label: "Leg Raises", sets: 3, "3 × max · Strict control",
-              symbol: "figure.core.training")
+        .init("Bulgarian Split Squat", label: "Split Squat", sets: 3,
+              "3 × 8 per leg · 15 lb DBs · Tall torso", symbol: "figure.strengthtraining.functional"),
+        .init("Standing Dumbbell Press", label: "DB Press", sets: 3,
+              "3 × 8 · 15 lb DBs · Ribs down", symbol: "figure.strengthtraining.traditional"),
+        .init("Single-Leg Glute Bridge", label: "Glute Bridge", sets: 3,
+              "3 × 10 per leg · 2 sec squeeze", symbol: "figure.core.training")
     ],
     // Day 3 — Active Recovery & Mobility
     [
         .session("Lap Swimming", label: "Swim", "20–30 min · Continuous, moderate pace",
                  symbol: "figure.pool.swim"),
-        .session("Rotational Mobility & T-Spine Flow", label: "T-Spine Flow",
-                 "15 min · Golf-swing mechanics", symbol: "figure.flexibility")
+        .session("Hip & Thoracic Mobility", label: "Mobility",
+                 "15 min · Open book, 90/90, pigeon · No bending", symbol: "figure.flexibility")
     ],
     // Day 4 — Structural Volume & Hypertrophy
     [
         .init("Chest-to-Bar Pull-Ups", label: "C2B Pull-Ups", sets: 3,
               "3 × 8–12 · Hard contraction hold at top", symbol: "figure.climbing"),
-        .init("Barbell Back Squats", label: "Back Squats", sets: 3, "3 × 10",
-              symbol: "figure.strengthtraining.traditional"),
+        .init("Deep Squat Hold", label: "Squat Hold", sets: 3,
+              "3 × 45 sec · Heels down, chest up, breathe", symbol: "figure.strengthtraining.functional"),
         .init("Dumbbell Incline Bench Press", label: "Incline DB Press", sets: 3, "3 × 10",
               symbol: "figure.strengthtraining.traditional"),
-        .init("Landmine Core Twists", label: "Landmine Twists", sets: 3, "3 × 12 per side",
-              symbol: "figure.core.training")
+        .init("Pallof Press", label: "Pallof Press", sets: 3,
+              "3 × 10 per side · Band at chest, resist the pull", symbol: "figure.core.training")
     ]
 ]
 
@@ -109,6 +109,8 @@ let defaultTetrad: [[Exercise]] = [
     var dogCame: Bool = false
     /// Weight used that day, per move name. Empty means "whatever the move's config says".
     var weights: [String: Double] = [:]
+    /// Set when the session is saved. A saved session's sets are locked against accidental taps until unlocked.
+    var savedAt: Date?
     init(day: Date, stopID: String) { self.day = day; self.stopID = stopID; setCounts = [:] }
 
     var isStarted: Bool { setCounts.values.contains { $0 > 0 } || !notes.isEmpty }

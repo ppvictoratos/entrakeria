@@ -7,7 +7,7 @@ extension WeekStop {
         switch id {
         case "swim": return .swimming
         case "nature": return .hiking
-        case "morning": return .coreTraining
+        case "morning", "core": return .coreTraining
         default: return .traditionalStrengthTraining
         }
     }
@@ -16,7 +16,7 @@ extension WeekStop {
     var healthActivities: [HKWorkoutActivityType] {
         switch id {
         case "nature": return [.hiking, .paddleSports, .walking]
-        case "machines": return [.traditionalStrengthTraining, .functionalStrengthTraining, .coreTraining]
+        case "machines", "upper", "lower": return [.traditionalStrengthTraining, .functionalStrengthTraining]
         default: return [healthActivity]
         }
     }
