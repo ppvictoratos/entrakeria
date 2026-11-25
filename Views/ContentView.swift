@@ -8,8 +8,10 @@ struct ContentView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \StopLog.day) private var logs: [StopLog]
+    @Query private var tetradSessions: [WorkoutSession]
     @State private var selectedDay = Week.calendar.startOfDay(for: .now)
     @State private var removing: StopLog?
+    @State private var showingGymBuckets = false
     @State private var showingBack = false
     @State private var showingExtras = false
     @State private var showingTetrad = false
@@ -24,10 +26,34 @@ struct ContentView: View {
     private var weekLogs: [StopLog] { logs.filter { log in week.contains { Week.calendar.isDate($0, inSameDayAs: log.day) } } }
 
     private func isDoneThisWeek(_ stop: WeekStop) -> Bool {
-        weekLogs.contains { $0.stopID == stop.id && $0.isStarted }
+        weekLogs.contains { stop.placementIDs.contains($0.stopID) && $0.isStarted }
     }
 
-    private var goalsDone: Int { WeekStop.all.filter { !$0.isBonus && isDoneThisWeek($0) }.count }
+    /// A tetrad workout that logged all four of its exercises lights its day in gold.
+    private func tetradDone(on day: Date) -> Bool {
+        tetradSessions.contains { session in
+            guard Week.calendar.isDate(session.date, inSameDayAs: day),
+                  defaultTetrad.indices.contains(session.dayIndex) else { return false }
+            let needed = Set(defaultTetrad[session.dayIndex].map(\.name))
+            return needed.isSubset(of: Set(session.logs.map(\.exerciseName)))
+        }
+    }
+
+    /// Days this week with a started log under any of these stops.
+    private func startedDays(_ stopIDs: [String]) -> Int {
+        Set(weekLogs.filter { stopIDs.contains($0.stopID) && $0.isStarted }
+            .map { Week.calendar.startOfDay(for: $0.day) }).count
+    }
+
+    /// Your week: gym 2, swim 1, outside 2. Morning is a daily start and the tetrad is as-needed, so neither counts here.
+    private var weekProgress: (done: Int, goal: Int) {
+        let parts: [(done: Int, goal: Int)] = [
+            (min(startedDays(["machines", "upper", "lower"]), 2), 2),
+            (min(startedDays(["swim"]), 1), 1),
+            (min(startedDays(["nature"]), 2), 2)
+        ]
+        return (parts.reduce(0) { $0 + $1.done }, parts.reduce(0) { $0 + $1.goal })
+    }
 
     var body: some View {
         ZStack {
@@ -42,15 +68,18 @@ struct ContentView: View {
                         .kerning(6)
                         .foregroundStyle(EnkrateiaPalette.bronze)
 
-                    WeekStrip(days: week, selectedDay: $selectedDay, logs: logs(on:))
+                    WeekStrip(days: week, selectedDay: $selectedDay, logs: logs(on:), tetradDone: tetradDone(on:))
 
                     tally
 
                     HStack(spacing: 6) {
                         ForEach(WeekStop.all) { stop in
                             StopChip(stop: stop,
-                                     isPlaced: logs(on: selectedDay).contains { $0.stopID == stop.id },
-                                     isDone: isDoneThisWeek(stop)) { toggle(stop) }
+                                     isPlaced: logs(on: selectedDay).contains { stop.placementIDs.contains($0.stopID) },
+                                     isDone: isDoneThisWeek(stop),
+                                     action: { toggle(stop) },
+                                     // Holding Gym asks which bucket to place: core, upper or lower.
+                                     onLongPress: stop.id == "machines" ? { showingGymBuckets = true } : nil)
                         }
                     }
 
@@ -65,6 +94,8 @@ struct ContentView: View {
                         smallLink("TETRAD") { showingTetrad = true }
                     }
 
+                    saveMyBackButton
+
                     MeanderBand().frame(height: 18).padding(.bottom, 8)
                 }
                 .padding(.horizontal, 16)
@@ -73,13 +104,6 @@ struct ContentView: View {
             // Solid strip so cards don't scroll under the clock.
             .safeAreaInset(edge: .top, spacing: 0) {
                 Color.clear.frame(height: 0).background(EnkrateiaPalette.bg)
-            }
-            // Pinned: a sore back shouldn't have to scroll past the workout.
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                saveMyBackButton
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(EnkrateiaPalette.bg)
             }
         }
         .onAppear {
@@ -111,11 +135,24 @@ struct ContentView: View {
         .sheet(isPresented: $showingTetrad) {
             TetradView().presentationDragIndicator(.visible)
         }
+        .confirmationDialog("Add to \(selectedDay.formatted(.dateTime.weekday(.wide)))",
+                            isPresented: $showingGymBuckets,
+                            titleVisibility: .visible) {
+            Button("CORE") { add(WeekStop.core) }
+            Button("UPPER") { add(WeekStop.upper) }
+            Button("LOWER") { add(WeekStop.lower) }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private func add(_ stop: WeekStop) {
+        context.insert(StopLog(day: selectedDay, stopID: stop.id))
+        save()
     }
 
     private var tally: some View {
-        Text("\(goalsDone) / \(WeekStop.goal) THIS WEEK")
-            .foregroundStyle(goalsDone >= WeekStop.goal ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
+        Text("\(weekProgress.done) / \(weekProgress.goal) THIS WEEK")
+            .foregroundStyle(weekProgress.done >= weekProgress.goal ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
             .font(.system(size: 11, weight: .medium))
             .kerning(2)
     }
@@ -220,6 +257,7 @@ private struct WeekStrip: View {
     let days: [Date]
     @Binding var selectedDay: Date
     let logs: (Date) -> [StopLog]
+    let tetradDone: (Date) -> Bool
 
     var body: some View {
         HStack(spacing: 4) {
@@ -227,6 +265,7 @@ private struct WeekStrip: View {
                 let isSelected = Week.calendar.isDate(day, inSameDayAs: selectedDay)
                 let isToday = Week.calendar.isDateInToday(day)
                 let placed = logs(day)
+                let shimmer = tetradDone(day)
                 Button { selectedDay = Week.calendar.startOfDay(for: day) } label: {
                     VStack(spacing: 6) {
                         Text(day.formatted(.dateTime.weekday(.narrow)))
@@ -236,6 +275,16 @@ private struct WeekStrip: View {
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(isSelected ? EnkrateiaPalette.gold : EnkrateiaPalette.line,
                                         lineWidth: isSelected ? 1.5 : 1)
+                            if shimmer {
+                                // A slow gold breathe around the day's stroke: the tetrad is done.
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(EnkrateiaPalette.gold, lineWidth: 1.5)
+                                    .shadow(color: EnkrateiaPalette.gold.opacity(0.8), radius: 4)
+                                    .phaseAnimator([0.35, 1.0]) { content, phase in
+                                        content.opacity(phase)
+                                    } animation: { _ in .easeInOut(duration: 1.6) }
+                                    .accessibilityHidden(true)
+                            }
                             if let first = placed.first, let stop = WeekStop.named(first.stopID) {
                                 StopIcon(symbol: stop.symbol, size: 16)
                                     .foregroundStyle(first.isStarted ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze)
@@ -264,11 +313,28 @@ private struct StopChip: View {
     let isPlaced: Bool
     let isDone: Bool
     let action: () -> Void
+    var onLongPress: (() -> Void)? = nil
 
     private var tint: Color { isPlaced || isDone ? EnkrateiaPalette.gold : EnkrateiaPalette.bronze }
 
     var body: some View {
-        Button(action: action) {
+        let tappable = chip
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
+        Group {
+            if let onLongPress {
+                tappable.onLongPressGesture(minimumDuration: 0.45, perform: onLongPress)
+            } else {
+                tappable
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(stop.name)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(isDone ? "Done this week" : isPlaced ? "On this day" : "")
+    }
+
+    private var chip: some View {
             VStack(spacing: 4) {
                 StopIcon(symbol: isDone ? "checkmark" : stop.symbol, size: 18)
                     .frame(height: 22)
@@ -284,10 +350,6 @@ private struct StopChip: View {
                 .fill(isPlaced ? EnkrateiaPalette.clay.opacity(0.18) : .clear))
             .overlay(RoundedRectangle(cornerRadius: 6)
                 .stroke(isPlaced ? EnkrateiaPalette.gold : EnkrateiaPalette.line, lineWidth: isPlaced ? 1.5 : 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(stop.name)
-        .accessibilityValue(isDone ? "Done this week" : isPlaced ? "On this day" : "")
     }
 }
 
@@ -362,6 +424,7 @@ private struct StopSection: View {
                          done: log.setCounts[move.name] ?? 0,
                          weight: log.weights[move.name] ?? cfg?.weight,
                          configuring: configuring,
+                         locked: locked,
                          setDone: { count in
                              log.setCounts[move.name] = count
                              onChange()
@@ -380,10 +443,32 @@ private struct StopSection: View {
                 }
             }
             if stop.isOutdoors { hikePlace }
+            saveSessionButton
             statsLog
         }
         .onAppear { placeDraft = log.placeName ?? "" }
         .onChange(of: log.notes) { onChange() }
+    }
+
+    private var locked: Bool { log.savedAt != nil }
+
+    /// Locks the sets once the session is done, so stray taps can't change it. Unlock to edit again.
+    private var saveSessionButton: some View {
+        Button {
+            log.savedAt = locked ? nil : .now
+            onChange()
+        } label: {
+            Label(locked ? "UNLOCK TO EDIT" : "SAVE SESSION", systemImage: locked ? "lock.open" : "lock.fill")
+                .font(.system(size: 12, weight: .bold))
+                .kerning(2)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(locked ? EnkrateiaPalette.bronze : EnkrateiaPalette.gold)
+                .overlay(RoundedRectangle(cornerRadius: 8)
+                    .stroke(locked ? EnkrateiaPalette.line : EnkrateiaPalette.gold, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
     }
 
     private var hikePlace: some View {
@@ -502,6 +587,7 @@ private struct MoveCard: View {
     let done: Int
     let weight: Double?
     let configuring: Bool
+    let locked: Bool
     let setDone: (Int) -> Void
     let setWeight: (Double?) -> Void
     let setSets: (Int) -> Void
@@ -535,9 +621,11 @@ private struct MoveCard: View {
             }
 
             SetPills(name: move.name, sets: sets, done: done, setDone: setDone)
+                .disabled(locked)
 
             if move.weighted {
                 WeightField(weight: weight, setWeight: setWeight)
+                    .disabled(locked)
             }
         }
         .padding(12)
