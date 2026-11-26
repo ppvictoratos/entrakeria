@@ -24,6 +24,8 @@
 	<string>Entrakeria reads your heart rate and energy during a workout.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Entrakeria saves your workouts to Apple Health so they count toward your rings.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKBackgroundModes</key>

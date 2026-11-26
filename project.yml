@@ -32,6 +32,7 @@ targets:
       - EntrakeriaApp.swift
       - Views
       - Assets.xcassets
+      - PrivacyInfo.xcprivacy
     dependencies:
       - target: EntrakeriaWidget
       - target: EntrakeriaWatch
@@ -71,10 +72,12 @@ targets:
       - StopIcon.swift
       - WatchSnapshot.swift
       - Watch
+      - Watch/PrivacyInfo.xcprivacy
     info:
       path: Watch/Info.plist
       properties:
         CFBundleDisplayName: Entrakeria
+        ITSAppUsesNonExemptEncryption: false
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.portokali.Entrakeria
         WKBackgroundModes:
